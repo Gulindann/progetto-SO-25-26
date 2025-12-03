@@ -1,9 +1,37 @@
 Initialized process control blocks   
-guarda come panico 
-guarda come panico2 
-guarda come panico3 
-guarda come panico4 
-guarda come panico5 
-guarda come panico 
-guarda come panico1 
-allocPcb: unexpected NULL   
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Lista vuota 
+allocPcb ok   
+freed 10 entries   
+Inserting...   
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+Alloco un pcb
+inserted 10 elements   
+emptyProcQ: unexpected TRUE
