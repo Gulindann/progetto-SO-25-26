@@ -1,0 +1,4 @@
+/home/riccardo/Desktop/starterKit/build/CMakeFiles/MultiPandOS.dir
+/home/riccardo/Desktop/starterKit/build/CMakeFiles/MultiPandOSuRISCV.dir
+/home/riccardo/Desktop/starterKit/build/CMakeFiles/edit_cache.dir
+/home/riccardo/Desktop/starterKit/build/CMakeFiles/rebuild_cache.dir
