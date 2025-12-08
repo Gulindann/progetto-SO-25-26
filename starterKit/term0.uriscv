@@ -1,37 +1,6 @@
 Initialized process control blocks   
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Lista vuota 
 allocPcb ok   
 freed 10 entries   
 Inserting...   
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
-Alloco un pcb
 inserted 10 elements   
 emptyProcQ: unexpected TRUE

@@ -36,7 +36,16 @@ pcb_t *allocPcb() {
     emptyPcb->p_semAdd = NULL;
     emptyPcb->p_supportStruct = NULL;
     emptyPcb->p_time = 0;
-    emptyPcb->p_s = 0;
+    emptyPcb->p_s.cause = 0;
+    emptyPcb->p_s.entry_hi = 0;
+    emptyPcb->p_s.mie = 0;
+    emptyPcb->p_s.pc_epc = 0;
+    emptyPcb->p_s.status = 0;
+
+    for (int i = 0; i < 32; i++) {
+      emptyPcb->p_s.gpr[i] = 0;
+    }
+
     emptyPcb->p_prio = 0;
 
     return emptyPcb;
