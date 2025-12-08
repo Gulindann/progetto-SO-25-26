@@ -52,19 +52,67 @@ pcb_t *allocPcb() {
   }
 }
 
-void mkEmptyProcQ(struct list_head *head) {}
+void mkEmptyProcQ(struct list_head *head) {
+  INIT_LIST_HEAD(head);
+}
 
-int emptyProcQ(struct list_head *head) {}
+int emptyProcQ(struct list_head *head) {
+  return list_empty(head);
+}
 
-void insertProcQ(struct list_head *head, pcb_t *p) {}
+void insertProcQ(struct list_head *head, pcb_t *p) {
+  if(list_empty(head))
+  {
+    list_add(&p->p_list, head);
+    return;
+  }
+  struct list_head* curr = head->next;
+  while ((container_of(curr, pcb_t, p_list)->p_prio >= p->p_prio) && (curr != head))
+  {
+    curr = curr->next;   
+  }
+  list_add(&p->p_list, curr->prev);
+}
 
-pcb_t *headProcQ(struct list_head *head) {}
+pcb_t *headProcQ(struct list_head *head) {
+  if(list_empty(head))
+  {
+    return NULL;
+  }
+  return container_of(head->next, pcb_t, p_list);
+}
 
-pcb_t *removeProcQ(struct list_head *head) {}
+pcb_t *removeProcQ(struct list_head *head) {
+  if(list_empty(head))
+  {
+    return NULL;
+  }
+  pcb_t* toRemove = container_of(head->next, pcb_t, p_list);
+  list_del(&toRemove->p_list);
+  return toRemove;
+}
 
-pcb_t *outProcQ(struct list_head *head, pcb_t *p) {}
+pcb_t *outProcQ(struct list_head *head, pcb_t *p) {
+  if(list_empty(head))
+  {
+    return NULL;
+  }
+  struct list_head* curr= head->next;
+  while(curr != head)
+  {
+    if(container_of(curr, pcb_t, p_list) == p)
+    {
+      list_del(&p->p_list);
+      return p;
+    }
+    curr = curr->next;
+  }
+  return NULL;
+}
 
-int emptyChild(pcb_t *p) {}
+int emptyChild(pcb_t *p) {
+
+}
 
 void insertChild(pcb_t *prnt, pcb_t *p) {}
 
