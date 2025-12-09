@@ -123,7 +123,11 @@ int emptyChild(pcb_t *p) {
 }*/
 
 void insertChild(pcb_t *prnt, pcb_t *p) {
-  p->p_parent = prnt;
+  p->p_parent = prnt; //la seguente riga connette il p_child del padre alla lista sib del figlio
+  // perciò per scendere nell0'albero genealogico (nonno -> padre -> figlio)
+  // bisogna fare usare container of sul padre per passare al p_child del figlio
+  // che funziona da elemento sentilla
+  // ALLERT: l'elemento sentinella si trova nel padre e non fa parte dei fratelli
   list_add(&p->p_sib, &prnt->p_child); // Primo fratello di p diventa figlio di
                                        // prnt (se non ha fratelli allora p)
 }
@@ -141,8 +145,7 @@ void insertChild(pcb_t *prnt, pcb_t *p) {
 }*/
 
 pcb_t *removeChild(pcb_t *p) {
-  if (list_empty(&p->p_child)) {
-
+  if (emptyChild(p)) {
     return NULL;
   }
   struct list_head *toRemove = p->p_child.next;
