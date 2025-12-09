@@ -3,4 +3,4 @@
 ## Riccardo Gadani
 ## Walid Birdaha
 ## Alexander Kapllanaj
-## Lorenzo
+## Lorenzo Novi
