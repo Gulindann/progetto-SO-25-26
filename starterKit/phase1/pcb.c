@@ -26,13 +26,12 @@ pcb_t *allocPcb() {
 
     pcb_t *emptyPcb = container_of(nodo, pcb_t, p_list);
 
-    emptyPcb->p_list.next = NULL;
-    emptyPcb->p_list.prev = NULL;
+    // Inizializzo le liste per il prossimo PCB
+    INIT_LIST_HEAD(&emptyPcb->p_list);
+    INIT_LIST_HEAD(&emptyPcb->p_child);
+    INIT_LIST_HEAD(&emptyPcb->p_sib);
+
     emptyPcb->p_parent = NULL;
-    emptyPcb->p_child.next = NULL;
-    emptyPcb->p_child.prev = NULL;
-    emptyPcb->p_sib.next = NULL;
-    emptyPcb->p_sib.prev = NULL;
     emptyPcb->p_semAdd = NULL;
     emptyPcb->p_supportStruct = NULL;
     emptyPcb->p_time = 0;
@@ -52,56 +51,46 @@ pcb_t *allocPcb() {
   }
 }
 
-void mkEmptyProcQ(struct list_head *head) {
-  INIT_LIST_HEAD(head);
-}
+void mkEmptyProcQ(struct list_head *head) { INIT_LIST_HEAD(head); }
 
-int emptyProcQ(struct list_head *head) {
-  return list_empty(head);
-}
+int emptyProcQ(struct list_head *head) { return list_empty(head); }
 
 void insertProcQ(struct list_head *head, pcb_t *p) {
-  if(list_empty(head))
-  {
+  if (list_empty(head)) {
     list_add(&p->p_list, head);
     return;
   }
-  struct list_head* curr = head->next;
-  while ((container_of(curr, pcb_t, p_list)->p_prio >= p->p_prio) && (curr != head))
-  {
-    curr = curr->next;   
+  struct list_head *curr = head->next;
+  while ((container_of(curr, pcb_t, p_list)->p_prio >= p->p_prio) &&
+         (curr != head)) {
+    curr = curr->next;
   }
   list_add(&p->p_list, curr->prev);
 }
 
 pcb_t *headProcQ(struct list_head *head) {
-  if(list_empty(head))
-  {
+  if (list_empty(head)) {
     return NULL;
   }
   return container_of(head->next, pcb_t, p_list);
 }
 
 pcb_t *removeProcQ(struct list_head *head) {
-  if(list_empty(head))
-  {
+  if (list_empty(head)) {
     return NULL;
   }
-  pcb_t* toRemove = container_of(head->next, pcb_t, p_list);
+  pcb_t *toRemove = container_of(head->next, pcb_t, p_list);
   list_del(&toRemove->p_list);
   return toRemove;
 }
 
 pcb_t *outProcQ(struct list_head *head, pcb_t *p) {
-  if(list_empty(head))
-  {
+  if (list_empty(head)) {
     return NULL;
   }
-  struct list_head* curr= head->next;
-  while(curr != head)
-  {
-    if(container_of(curr, pcb_t, p_list) == p)
-    {
+  struct list_head *curr = head->next;
+  while (curr != head) {
+    if (container_of(curr, pcb_t, p_list) == p) {
       list_del(&p->p_list);
       return p;
     }
@@ -111,59 +100,80 @@ pcb_t *outProcQ(struct list_head *head, pcb_t *p) {
 }
 
 int emptyChild(pcb_t *p) {
-  if(p->p_child.next == NULL)
-  {
+  if (list_empty(&p->p_child)) {
     return 1;
   }
   return 0;
 }
 
-void insertChild(pcb_t *prnt, pcb_t *p) {
-  if(emptyChild(prnt))
-  {
+/*void insertChild(pcb_t *prnt, pcb_t *p) {
+  if (emptyChild(prnt)) {
     prnt->p_child.next = &p->p_child;
     p->p_parent = prnt;
     return;
+  } else {
+    // p->p_sib.next = &container_of(prnt->p_child.next, pcb_t, p_child)->p_sib;
+    // opzione
+    p->p_sib.next = &prnt->p_child.next; // qui rendo D un fratello di A
+    container_of(prnt->p_child.next, pcb_t, p_child)->p_sib.prev =
+        &p->p_sib;                    // qui dico che A ha come fratello D
+    p->p_parent = prnt;               // qui rendo P padre di D
+    prnt->p_child.next = &p->p_child; // qui dico che P ha come figlio D
   }
-  else
-  {
-    //p->p_sib.next = &container_of(prnt->p_child.next, pcb_t, p_child)->p_sib; opzione
-    p->p_sib.next = &prnt->p_child.next;  //qui rendo D un fratello di A
-    container_of(prnt->p_child.next, pcb_t, p_child)->p_sib.prev = &p->p_sib; //qui dico che A ha come fratello D
-    p->p_parent = prnt; // qui rendo P padre di D
-    prnt->p_child.next = &p->p_child; //qui dico che P ha come figlio D
-  }
+}*/
+
+void insertChild(pcb_t *prnt, pcb_t *p) {
+  p->p_parent = prnt;
+  list_add(&p->p_sib, &prnt->p_child); // Primo fratello di p diventa figlio di
+                                       // prnt (se non ha fratelli allora p)
 }
-pcb_t *removeChild(pcb_t *p) {
-  if(emptyChild(p))
-  {
+
+/*pcb_t *removeChild(pcb_t *p) {
+  if (emptyChild(p)) {
     return NULL;
   }
-  pcb_t* toRemove = container_of(p->p_child.next, pcb_t, p_child);
-  p->p_child.next = toRemove->p_sib.next; 
+  pcb_t *toRemove = container_of(p->p_child.next, pcb_t, p_child);
+  p->p_child.next = toRemove->p_sib.next;
   toRemove->p_sib.next->prev = NULL;
   toRemove->p_sib.next = NULL;
   toRemove->p_parent = NULL;
   return toRemove;
-}
+}*/
 
-pcb_t *outChild(pcb_t *p) {
-  if(p->p_parent == NULL)
-  {
+pcb_t *removeChild(pcb_t *p) {
+  if (list_empty(&p->p_child)) {
+
     return NULL;
   }
-  if(p->p_sib.prev == NULL)
-  {
+  struct list_head *toRemove = p->p_child.next;
+  list_del(toRemove);
+
+  struct pcb_t *toRemovePCB = container_of(toRemove, pcb_t, p_sib);
+  toRemovePCB->p_parent = NULL;
+
+  return toRemovePCB;
+}
+
+/*pcb_t *outChild(pcb_t *p) {
+  if (p->p_parent == NULL) {
+    return NULL;
+  }
+  if (p->p_sib.prev == NULL) {
     return removeChild(p->p_parent);
   }
-  p->p_parent=NULL;
-  if(p->p_sib.next == NULL)
-  {
-    p->p_sib.prev->next=NULL;
+  p->p_parent = NULL;
+  if (p->p_sib.next == NULL) {
+    p->p_sib.prev->next = NULL;
+  } else {
+    list_del(&p->p_sib);
   }
-  else
-  {
-     list_del(&p->p_sib);
-  }
+  return p;
+}*/
+
+pcb_t *outChild(pcb_t *p) {
+  if (p->p_parent == NULL)
+    return NULL;
+  list_del(&p->p_sib);
+  p->p_parent = NULL;
   return p;
 }
