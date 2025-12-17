@@ -58,6 +58,9 @@ pcb_t *allocPcb()
         INIT_LIST_HEAD(&emptyPcb->p_child);
         INIT_LIST_HEAD(&emptyPcb->p_sib);
 
+        // Assegnazione del PID e incremento del contatore
+        emptyPcb->p_pid = next_pid++;
+
         return emptyPcb;
     }
 }
@@ -127,54 +130,17 @@ pcb_t *outProcQ(struct list_head *head, pcb_t *p)
 
 int emptyChild(pcb_t *p)
 {
-    if (list_empty(&p->p_child))
-    {
-        return 1;
-    }
-    return 0;
+    return list_empty(&p->p_child); // Ritorna 1 se p non ha figli, 0 altrimenti
 }
-
-/*void insertChild(pcb_t *prnt, pcb_t *p) {
-  if (emptyChild(prnt)) {
-    prnt->p_child.next = &p->p_child;
-    p->p_parent = prnt;
-    return;
-  } else {
-    // p->p_sib.next = &container_of(prnt->p_child.next, pcb_t, p_child)->p_sib;
-    // opzione
-    p->p_sib.next = &prnt->p_child.next; // qui rendo D un fratello di A
-    container_of(prnt->p_child.next, pcb_t, p_child)->p_sib.prev =
-        &p->p_sib;                    // qui dico che A ha come fratello D
-    p->p_parent = prnt;               // qui rendo P padre di D
-    prnt->p_child.next = &p->p_child; // qui dico che P ha come figlio D
-  }
-}*/
 
 void insertChild(pcb_t *prnt, pcb_t *p)
 {
-    p->p_parent = prnt; // la seguente riga connette il p_child del padre alla
-                        // lista sib del figlio
-    // perciò per scendere nell0'albero genealogico (nonno -> padre -> figlio)
-    // bisogna fare usare container of sul padre per passare al p_child del figlio
-    // che funziona da elemento sentilla
-    // ALLERT: l'elemento sentinella si trova nel padre e non fa parte dei
-    // fratelli
-    list_add(&p->p_sib, &prnt->p_child); // Primo fratello di p diventa figlio di
-                                         // prnt (se non ha fratelli allora p)
+    p->p_parent = prnt;
+    /* Inserimento di p e fratelli nella lista dei figli del padre */
+    list_add(&p->p_sib, &prnt->p_child);
 }
 
-/*pcb_t *removeChild(pcb_t *p) {
-  if (emptyChild(p)) {
-    return NULL;
-  }
-  pcb_t *toRemove = container_of(p->p_child.next, pcb_t, p_child);
-  p->p_child.next = toRemove->p_sib.next;
-  toRemove->p_sib.next->prev = NULL;
-  toRemove->p_sib.next = NULL;
-  toRemove->p_parent = NULL;
-  return toRemove;
-}*/
-
+// Rimuove e ritorna il primo figlio di p
 pcb_t *removeChild(pcb_t *p)
 {
     if (emptyChild(p))
@@ -190,22 +156,7 @@ pcb_t *removeChild(pcb_t *p)
     return toRemovePCB;
 }
 
-/*pcb_t *outChild(pcb_t *p) {
-  if (p->p_parent == NULL) {
-    return NULL;
-  }
-  if (p->p_sib.prev == NULL) {
-    return removeChild(p->p_parent);
-  }
-  p->p_parent = NULL;
-  if (p->p_sib.next == NULL) {
-    p->p_sib.prev->next = NULL;
-  } else {
-    list_del(&p->p_sib);
-  }
-  return p;
-}*/
-
+// Rimuove e ritorna il p
 pcb_t *outChild(pcb_t *p)
 {
     if (p->p_parent == NULL)
