@@ -6,27 +6,31 @@ static int next_pid = 1;
 
 void initPcbs() {
 
-  INIT_LIST_HEAD(&pcbFree_h);
+  INIT_LIST_HEAD(&pcbFree_h); // Init della lista dei PCB liberi
   for (int i = 0; i < MAXPROC; i++) {
-    freePcb(&pcbFree_table[i]);
+    freePcb(&pcbFree_table[i]); // Aggiunta dei PCB alla lista dei PCB liberi
   }
 }
 
-void freePcb(pcb_t *p) { list_add(&p->p_list, &pcbFree_h); }
+void freePcb(pcb_t *p) {
+  list_add(&p->p_list, &pcbFree_h); // Aggiunta del PCB p alla lista dei PCB liberi
+}
 
-pcb_t *allocPcb() {
+// Restituisce un puntatore ad un PCB libero. 
+pcb_t *allocPcb() { // 
 
-  if (list_empty(&pcbFree_h)) {
-    return NULL;
+  if (list_empty(&pcbFree_h)) {  
+    return NULL; // NULL se non ci sono PCB liberi
 
   } else {
 
+    // Rimozione del primo PCB dalla lista dei PCB liberi
     struct list_head *nodo = pcbFree_h.next;
     list_del(nodo);
 
     pcb_t *emptyPcb = container_of(nodo, pcb_t, p_list);
 
-    // Inizializzo le liste per il prossimo PCB
+    // Inizializzazione dei campi del PCB (tranne p_pid)
     INIT_LIST_HEAD(&emptyPcb->p_list);
     INIT_LIST_HEAD(&emptyPcb->p_child);
     INIT_LIST_HEAD(&emptyPcb->p_sib);
@@ -35,12 +39,12 @@ pcb_t *allocPcb() {
     emptyPcb->p_semAdd = NULL;
     emptyPcb->p_supportStruct = NULL;
     emptyPcb->p_time = 0;
+    
     emptyPcb->p_s.cause = 0;
     emptyPcb->p_s.entry_hi = 0;
     emptyPcb->p_s.mie = 0;
     emptyPcb->p_s.pc_epc = 0;
     emptyPcb->p_s.status = 0;
-
     for (int i = 0; i < 32; i++) {
       emptyPcb->p_s.gpr[i] = 0;
     }
@@ -51,7 +55,10 @@ pcb_t *allocPcb() {
   }
 }
 
-void mkEmptyProcQ(struct list_head *head) { INIT_LIST_HEAD(head); }
+// Init della coda dei processi
+void mkEmptyProcQ(struct list_head *head) {
+  INIT_LIST_HEAD(head); 
+  }
 
 int emptyProcQ(struct list_head *head) { return list_empty(head); }
 
@@ -123,11 +130,13 @@ int emptyChild(pcb_t *p) {
 }*/
 
 void insertChild(pcb_t *prnt, pcb_t *p) {
-  p->p_parent = prnt; //la seguente riga connette il p_child del padre alla lista sib del figlio
+  p->p_parent = prnt; // la seguente riga connette il p_child del padre alla
+                      // lista sib del figlio
   // perciò per scendere nell0'albero genealogico (nonno -> padre -> figlio)
   // bisogna fare usare container of sul padre per passare al p_child del figlio
   // che funziona da elemento sentilla
-  // ALLERT: l'elemento sentinella si trova nel padre e non fa parte dei fratelli
+  // ALLERT: l'elemento sentinella si trova nel padre e non fa parte dei
+  // fratelli
   list_add(&p->p_sib, &prnt->p_child); // Primo fratello di p diventa figlio di
                                        // prnt (se non ha fratelli allora p)
 }

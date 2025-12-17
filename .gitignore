@@ -2,3 +2,4 @@ build/
 *.o
 *.uriscv
 .DS_Store
+.vscode/
