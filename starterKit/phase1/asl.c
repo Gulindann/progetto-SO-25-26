@@ -85,33 +85,6 @@ int insertBlocked(int *semAdd, pcb_t *p)
     return FALSE;
 }
 
-pcb_t *removeBlocked(int *semAdd)
-{
-    struct list_head *temp;
-    struct pcb_t *toRemovePCB;
-    if (list_empty(&semd_h))
-    {
-        return NULL;
-    }
-
-    list_for_each(temp, &semd_h)
-    {
-        struct semd_t *toRemove = container_of(temp, semd_t, s_link);
-        if (toRemove->s_key == semAdd)
-        {
-            toRemovePCB = container_of(toRemove->s_procq.next, pcb_t, p_list);
-            list_del(toRemove->s_procq.next);
-            if (emptyProcQ(&toRemove->s_procq))
-            {
-                list_del(&toRemove->s_link);
-                list_add(&toRemove->s_link, &semdFree_h);
-            }
-            return toRemovePCB;
-        }
-    }
-    return NULL;
-}
-
 // Rimuove e restituisce il primo processo bloccato sul semaforo con chiave semAdd
 pcb_t *removeBlocked(int *semAdd)
 {
