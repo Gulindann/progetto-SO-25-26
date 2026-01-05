@@ -4,7 +4,7 @@ static struct list_head pcbFree_h;
 static pcb_t pcbFree_table[MAXPROC];
 static int next_pid = 1;
 
-// Inizializza la lista dei PCB liberi
+// Initialize the free PCB list
 void initPcbs()
 {
     INIT_LIST_HEAD(&pcbFree_h);
@@ -14,13 +14,13 @@ void initPcbs()
     }
 }
 
-// Inserisce il PCB puntato da p nella lista dei PCB liberi
+// Insert the PCB pointed to by p into the free PCB list
 void freePcb(pcb_t *p)
 {
     list_add(&p->p_list, &pcbFree_h);
 }
 
-// Restituisce un puntatore ad un PCB libero (NULL se vuota)
+// Return a pointer to a free PCB (NULL if empty)
 pcb_t *allocPcb()
 {
     if (list_empty(&pcbFree_h))
@@ -29,11 +29,11 @@ pcb_t *allocPcb()
     }
     else
     {
-        // Rimozione dalla testa della lista pcbFree
+        // Remove from the head of the pcbFree list
         struct pcb_t *p = container_of(pcbFree_h.next, pcb_t, p_list);
         list_del(&p->p_list);
 
-        // Inizializzazione di TUTTI i campi
+        // Initialize ALL fields
         INIT_LIST_HEAD(&p->p_list);
         INIT_LIST_HEAD(&p->p_child);
         INIT_LIST_HEAD(&p->p_sib);
@@ -55,46 +55,46 @@ pcb_t *allocPcb()
             p->p_s.gpr[i] = 0;
         }
 
-        // Assegnazione PID e incremento
+        // Assign PID and increment
         p->p_pid = next_pid++;
 
         return p;
     }
 }
 
-// Inizializza la sentinella della coda dei processi
+// Initialize the process queue sentinel
 void mkEmptyProcQ(struct list_head *head)
 {
     INIT_LIST_HEAD(head);
 }
 
-// Restituisce TRUE se la coda è vuota, FALSE altrimenti
+// Return TRUE if the queue is empty, FALSE otherwise
 int emptyProcQ(struct list_head *head)
 {
     return list_empty(head);
 }
 
-// Inserisce p nella coda dei processi ordinata per priorità
+// Insert p into the process queue ordered by priority
 void insertProcQ(struct list_head *head, pcb_t *p)
 {
     pcb_t *iter;
 
-    // Scorre la lista per trovare la posizione corretta (ordine decrescente di priorità)
+    // Iterate over the list to find the correct position (descending priority order)
     list_for_each_entry(iter, head, p_list)
     {
         if (p->p_prio > iter->p_prio)
         {
-            // Inserisce p PRIMA dell'elemento corrente (iter)
-            // poichè p ha priorità maggiore
+            // Insert p BEFORE the current element (iter)
+            // since p has higher priority
             list_add_tail(&p->p_list, &iter->p_list);
             return;
         }
     }
-    // Se la lista è vuota, o p ha la priorità più bassa/uguale a tutti, va in coda
+    // If the list is empty, or p has the lowest/equal priority, insert at the tail
     list_add_tail(&p->p_list, head);
 }
 
-// Restituisce l'elemento di testa della coda senza rimuoverlo
+// Return the head element of the queue without removing it
 pcb_t *headProcQ(struct list_head *head)
 {
     if (list_empty(head))
@@ -104,7 +104,7 @@ pcb_t *headProcQ(struct list_head *head)
     return container_of(head->next, pcb_t, p_list);
 }
 
-// Rimuove e restituisce l'elemento di testa della coda
+// Remove and return the head element of the queue
 pcb_t *removeProcQ(struct list_head *head)
 {
     if (list_empty(head))
@@ -116,12 +116,12 @@ pcb_t *removeProcQ(struct list_head *head)
     return p;
 }
 
-// Rimuove il PCB p dalla coda puntata da head (se presente)
+// Remove the PCB p from the queue pointed to by head (if present)
 pcb_t *outProcQ(struct list_head *head, pcb_t *p)
 {
     pcb_t *iter;
 
-    // Cerca p nella lista
+    // Search for p in the list
     list_for_each_entry(iter, head, p_list)
     {
         if (iter == p)
@@ -133,21 +133,21 @@ pcb_t *outProcQ(struct list_head *head, pcb_t *p)
     return NULL;
 }
 
-// Restituisce TRUE se p non ha figli
+// Return TRUE if p has no children
 int emptyChild(pcb_t *p)
 {
     return list_empty(&p->p_child);
 }
 
-// Inserisce p come figlio di prnt
+// Insert p as a child of prnt
 void insertChild(pcb_t *prnt, pcb_t *p)
 {
     p->p_parent = prnt;
-    // Aggiunge p alla coda dei figli del padre (in coda, convenzione FIFO per i fratelli)
+    // Add p to the parent's child queue (at the tail, FIFO convention for siblings)
     list_add_tail(&p->p_sib, &prnt->p_child);
 }
 
-// Rimuove e restituisce il primo figlio di p
+// Remove and return the first child of p
 pcb_t *removeChild(pcb_t *p)
 {
     if (emptyChild(p))
@@ -162,7 +162,7 @@ pcb_t *removeChild(pcb_t *p)
     return child;
 }
 
-// Rimuove p dalla lista dei figli del padre
+// Remove p from the parent's child list
 pcb_t *outChild(pcb_t *p)
 {
     if (p->p_parent == NULL)

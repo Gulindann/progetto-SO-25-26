@@ -5,7 +5,7 @@ static semd_t semd_table[MAXPROC];
 static struct list_head semdFree_h;
 static struct list_head semd_h;
 
-// Inizializza la lista ASL e la lista dei semafori liberi
+// Initialize the ASL list and the free semaphore list
 void initASL()
 {
     INIT_LIST_HEAD(&semdFree_h);
@@ -14,13 +14,13 @@ void initASL()
     for (int i = 0; i < MAXPROC; i++)
     {
         semd_table[i].s_key = NULL;
-        INIT_LIST_HEAD(&semd_table[i].s_procq); // Inizializza coda processi
-        INIT_LIST_HEAD(&semd_table[i].s_link);  // Inizializza link lista
+        INIT_LIST_HEAD(&semd_table[i].s_procq); // Initialize process queue
+        INIT_LIST_HEAD(&semd_table[i].s_link);  // Initialize list link
         list_add(&semd_table[i].s_link, &semdFree_h);
     }
 }
 
-// Funzione ausiliaria per trovare il semaforo con chiave semAdd
+// Helper function to find the semaphore with key semAdd
 static semd_t *getSemd(int *semAdd)
 {
     semd_t *iter;
@@ -32,34 +32,34 @@ static semd_t *getSemd(int *semAdd)
         }
         if (iter->s_key > semAdd)
         {
-            return NULL; // La lista è ordinata, se supero il valore, non c'è
+            return NULL; // The list is ordered, if I exceed the value, it's not there
         }
     }
     return NULL;
 }
 
-// Inserisce il PCB p nella coda del semaforo con chiave semAdd
+// Insert the PCB p into the queue of the semaphore with key semAdd
 int insertBlocked(int *semAdd, pcb_t *p)
 {
     semd_t *sem = getSemd(semAdd);
 
-    // Se il semaforo non esiste, ne creo uno nuovo, se possibile
+    // If the semaphore does not exist, create a new one, if possible
     if (sem == NULL)
     {
         if (list_empty(&semdFree_h))
         {
             return TRUE;
         }
-        // Prendo dalla testa dei liberi
+        // Take from the head of the free list
         sem = container_of(semdFree_h.next, semd_t, s_link);
         list_del(&sem->s_link);
 
-        // Inizializzo
+        // Initialize
         INIT_LIST_HEAD(&sem->s_procq);
         INIT_LIST_HEAD(&sem->s_link);
         sem->s_key = semAdd;
 
-        // Inserimento ordinato nella ASL
+        // Ordered insertion into the ASL
         semd_t *iter;
         int inserted = 0;
         list_for_each_entry(iter, &semd_h, s_link)
@@ -72,20 +72,20 @@ int insertBlocked(int *semAdd, pcb_t *p)
             }
         }
 
-        // Inserimento in coda se semAdd è il più grande o se la lista è vuota
+        // Insert at the tail if semAdd is the largest or if the list is empty
         if (!inserted)
         {
             list_add_tail(&sem->s_link, &semd_h);
         }
     }
 
-    // Inserisco il PCB nella coda del semaforo
+    // Insert the PCB into the semaphore queue
     p->p_semAdd = semAdd;
     list_add_tail(&p->p_list, &sem->s_procq);
     return FALSE;
 }
 
-// Rimuove e restituisce il primo processo bloccato sul semaforo con chiave semAdd
+// Remove and return the first process blocked on the semaphore with key semAdd
 pcb_t *removeBlocked(int *semAdd)
 {
 
@@ -98,7 +98,7 @@ pcb_t *removeBlocked(int *semAdd)
 
     pcb_t *p = removeProcQ(&sem->s_procq);
 
-    // Se la coda del semaforo è vuota dopo la rimozione, rimuovo il semaforo dalla ASL
+    // If the semaphore queue is empty after removal, remove the semaphore from the ASL
     if (emptyProcQ(&sem->s_procq))
     {
         list_del(&sem->s_link);
@@ -108,7 +108,7 @@ pcb_t *removeBlocked(int *semAdd)
     return p;
 }
 
-// Rimuove il PCB p dalla coda dei processi del semaforo
+// Remove the PCB p from the semaphore process queue
 pcb_t *outBlocked(pcb_t *p)
 {
 
@@ -124,13 +124,13 @@ pcb_t *outBlocked(pcb_t *p)
         return NULL;
     }
 
-    // PCB p viene rimosso dalla coda del semaforo
+    // PCB p is removed from the semaphore queue
     pcb_t *removed = outProcQ(&sem->s_procq, p);
 
-    // Se il PCB è stato rimosso
+    // If the PCB was removed
     if (removed != NULL)
     {
-        // Se la coda del semaforo è vuota dopo la rimozione, rimuovo il semaforo dalla ASL
+        // If the semaphore queue is empty after removal, remove the semaphore from the ASL
         if (emptyProcQ(&sem->s_procq))
         {
             list_del(&sem->s_link);
@@ -141,7 +141,7 @@ pcb_t *outBlocked(pcb_t *p)
     return removed;
 }
 
-// Restituisce il PCB in testa nella coda dei processi del semaforo con chiave semAdd
+// Return the head PCB in the process queue of the semaphore with key semAdd
 pcb_t *headBlocked(int *semAdd)
 {
 
