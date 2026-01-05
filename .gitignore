@@ -1,5 +1,24 @@
+# Cartella di build (creata da cmake -B build)
 build/
+
+# Build system di CMake (se lanciato per sbaglio nella root)
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+Testing/
+
+# Eseguibili e output compilazione
+MultiPandOS
+*.elf
 *.o
-*.uriscv
-.DS_Store
+*.a
+
+# File dell'emulatore
+term0.uriscv
+*.core.uriscv
+*.stab.uriscv
+
+# Editor e OS
 .vscode/
+.DS_Store
