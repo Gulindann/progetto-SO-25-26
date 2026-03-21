@@ -9,7 +9,7 @@ static semd_t SEM_DEV_Q[SEMDEVLEN]; // ALTRIMENTI 7 = 5 device + 1 pseudo-clock 
 extern void test();
 
 int main(){
-    
+
     passupvector_t *passupvector = (passupvector_t *) PASSUPVECTOR;
     //passupvector->tlb_refill_handler = (memaddr)uTLB_RefillHandler;
     passupvector->tlb_refill_stackPtr=KERNELSTACK;
@@ -41,7 +41,5 @@ int main(){
     INIT->p_s.status = MSTATUS_MPIE_MASK | MSTATUS_MPP_M;
     INIT->p_s.pc_epc = (memaddr) test;
 
-    // Chiama Scheduler
-    
-
+    scheduler();
 }
