@@ -9,8 +9,12 @@ static semd_t SEM_DEV_Q[SEMDEVLEN]; // ALTRIMENTI 7 = 5 device + 1 pseudo-clock 
 extern void test();
 
 int main(){
-
-    // aggiungere Cose del passup vector
+    
+    passupvector_t *passupvector = (passupvector_t *) PASSUPVECTOR;
+    //passupvector->tlb_refill_handler = (memaddr)uTLB_RefillHandler;
+    passupvector->tlb_refill_stackPtr=KERNELSTACK;
+    //passupvector->exception_handler = (memaddr)exceptionHandler;
+    passupvector->exception_stackPtr=KERNELSTACK;
 
     initPcbs();
     initASL();
