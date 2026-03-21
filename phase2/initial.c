@@ -9,11 +9,20 @@ semd_t SEM_DEV_Q[SEMDEVLEN]; // ALTRIMENTI 7 = 5 device + 1 pseudo-clock + 1 ter
 
 extern void test();
 
+void uTLB_RefillHandler()
+{
+    int prid = getPRID();
+    setENTRYHI(0x80000000);
+    setENTRYLO(0x00000000);
+    TLBWR();
+    LDST((state_t *)BIOSDATAPAGE);
+}
+
 int main()
 {
 
     passupvector_t *passupvector = (passupvector_t *)PASSUPVECTOR;
-    // passupvector->tlb_refill_handler = (memaddr)uTLB_RefillHandler;
+    passupvector->tlb_refill_handler = (memaddr)uTLB_RefillHandler;
     passupvector->tlb_refill_stackPtr = KERNELSTACK;
     // passupvector->exception_handler = (memaddr)exceptionHandler;
     passupvector->exception_stackPtr = KERNELSTACK;
