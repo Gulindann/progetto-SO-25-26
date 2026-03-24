@@ -9,10 +9,10 @@ void exceptionHandler()
 
     // Controllo se é interrupt
     if (CAUSE_IS_INT())
-        interruptHandler(ID);
+        interruptHandler(ID); // Hardware, timer o periferiche
 
     // Guardo il codice dell'eccezione, faccio lo switch e smisto sulle altre funzioni
-    switch (ID)
+    switch (ID) // Software
     {
     case 8:
     case 11:
@@ -24,7 +24,7 @@ void exceptionHandler()
         break;
 
     case 0 ... 7:
-    case 9:
+    case 9: // KILL
     case 10:
     case 12 ... 23:
         trapExceptionHandler(ID);
