@@ -1,5 +1,6 @@
 #include "headers/exceptions.h"
 #include "headers/initial.h"
+#include "headers/scheduler.h"
 #include "uriscv/liburiscv.h"
 
 void exceptionHandler()
@@ -53,130 +54,142 @@ void tlbExceptionHandler(int excCode)
 {
 }
 
-void syscallExceptionHandler(int excCode)
-{
-    // Devo controllare se il processo é in kernel mode...
-
-    state_t *saved_exception_state = GET_EXCEPTION_STATE_PTR(0);
-
-    unsigned int mode = saved_exception_state->status & MSTATUS_MPP_MASK;
-
-    if (mode == MSTATUS_MPP_M)
-    {
-        // Devo ricavare il valore del registro general purpose a0...
-        // Switch su tutte le system call
-        unsigned int SYS_ID = saved_exception_state->gpr[24];
-        switch (SYS_ID)
-        {
-        case -1:
-            CreateProcess(&saved_exception_state);
-            break;
-        case -2:
-        case -3:
-        case -4:
-        case -5:
-        case -6:
-        default:
-        }
-    }
-    else
-    { // User mode. Hai violato la legge!
-        return;
-    }
-}
-
 void trapExceptionHandler(int excCode)
 {
 }
 
-// Funzioni system call (poi in altro file)
-void CreateProcess(state_t *caller_state)
+void syscallExceptionHandler(int excCode)
 {
-    pcb_t *INIT = allocPcb();
-    if (INIT == NULL) // Se non ci sono PCB liberi non puó venir creato un nuovo processo
+    state_t *saved_exception_state = GET_EXCEPTION_STATE_PTR(0);
+    unsigned int mode = saved_exception_state->status & MSTATUS_MPP_MASK;
+
+    if (mode == MSTATUS_MPP_M)
     {
-        caller_state->gpr[24] = -1;
-        return;
+        int SYS_ID = saved_exception_state->reg_a0;
+        switch (SYS_ID)
+        {
+        case CREATEPROCESS:
+            CreateProcess(saved_exception_state);
+            break;
+        case TERMPROCESS:
+            TerminateProcess(saved_exception_state);
+            break;
+        }
     }
     else
     {
-        INIT->p_s = *(state_t *)caller_state->gpr[25];              // a1
-        INIT->p_prio = *(int *)caller_state->gpr[26];               // a2
-        INIT->p_supportStruct = (support_t *)caller_state->gpr[27]; // a3
-        // ID assegnato in allocPcb
-        insertProcQ(&READY_Q, INIT);
-        insertChild(&CURRENT_P->p_child, INIT);
-        PROC_C++;
-        INIT->p_time = 0;      // Giá settato a 0 in allocPcb
-        INIT->p_semAdd = NULL; // Giá settato a NULL in allocPcb
+        // User mode: simulare Program Trap
+        return;
     }
+}
+
+void CreateProcess(state_t *caller_state)
+{
+    pcb_t *INIT = allocPcb();
+    if (INIT == NULL)
+    {
+        caller_state->reg_a0 = -1; // Ritorna -1 se fallisce
+    }
+    else
+    {
+
+        INIT->p_s = *(state_t *)caller_state->reg_a1;
+        INIT->p_prio = caller_state->reg_a2;
+        INIT->p_supportStruct = (support_t *)caller_state->reg_a3;
+
+        insertProcQ(&READY_Q, INIT);
+        insertChild(CURRENT_P, INIT);
+        PROC_C++;
+
+        caller_state->reg_a0 = INIT->p_pid; // Ritorna il PID in a0
+    }
+
+    // Incremento il PC per non rifare la syscall
+    caller_state->pc_epc += 4;
+    LDST(caller_state); // Torna al processo chiamante
+}
+
+// --- Funzioni di supporto per TerminateProcess ---
+
+pcb_t *findPcbByPid(pcb_t *root, int target_pid)
+{
+    if (root->p_pid == target_pid)
+        return root;
+
+    pcb_t *child;
+    list_for_each_entry(child, &root->p_child, p_sib)
+    {
+        pcb_t *found = findPcbByPid(child, target_pid);
+        if (found != NULL)
+            return found;
+    }
+    return NULL;
+}
+
+void terminateProcessTree(pcb_t *p)
+{
+    while (!emptyChild(p))
+    {
+        terminateProcessTree(removeChild(p));
+    }
+
+    if (p != CURRENT_P)
+    {
+        if (outProcQ(&READY_Q, p) == NULL)
+        {
+            int *sem = p->p_semAdd;
+            outBlocked(p);
+
+            // Se l'indirizzo del semaforo è dentro l'array dei device, decrementa SBLOCK_C
+            if (sem >= &SEM_DEV_Q[0] && sem <= &SEM_DEV_Q[SEMDEVLEN - 1]) // Controllo se id del mio semaforo si trova tra i semafori device a livello di memoria
+            {
+                SBLOCK_C--;
+            }
+        }
+    }
+
+    freePcb(p);
+    PROC_C--;
 }
 
 void TerminateProcess(state_t *caller_state)
 {
-    unsigned int PPID = *(int *)caller_state->gpr[25];
-    if (PPID == 0)
+    int target_pid = caller_state->reg_a1;
+    pcb_t *target_pcb = NULL;
+
+    if (target_pid == 0)
     {
-        outChild(CURRENT_P); // Stacco il processo da suo padre
-        pcb_t *tmp = CURRENT_P;
-        // Cosa per distruggere tutto
-        SterminatorePazzoAssassinoKillerAssurdoTrumpDioMostroDiFirenzeJackLoSquartatoreDiPcb(tmp);
+        target_pcb = CURRENT_P;
     }
     else
     {
-        pcb_t *iter;
-        pcb_t *tmp = NULL;
-
-        // Trova processo
-        list_for_each_entry(iter, &READY_Q, p_list)
+        pcb_t *root = CURRENT_P;
+        while (root->p_parent != NULL)
         {
-            if (iter->p_pid == PPID)
-            {
-                tmp = iter;
-            }
+            root = root->p_parent;
         }
-        if (tmp == NULL)
-        {
-            return;
-        }
-
-        // Cosa per distruggere tutto
-        SterminatorePazzoAssassinoKillerAssurdoTrumpDioMostroDiFirenzeJackLoSquartatoreDiPcb(tmp);
-    }
-}
-
-void SterminatorePazzoAssassinoKillerAssurdoTrumpDioMostroDiFirenzeJackLoSquartatoreDiPcb(pcb_t *p)
-{
-    // 1. Finché il processo ha figli, stacco il primo e lo stermino
-    while (!emptyChild(p))
-    {
-        pcb_t *figlio = removeChild(p);
-        SterminatorePazzoAssassinoKillerAssurdoTrumpDioMostroDiFirenzeJackLoSquartatoreDiPcb(figlio); // Ricorsione: scendo fino alla foglia
+        target_pcb = findPcbByPid(root, target_pid);
     }
 
-    if (p == CURRENT_P)
+    if (target_pcb == NULL)
     {
-        // È il processo attualmente in esecuzione, non è in nessuna coda
+        // Se non trovo il processo, proseguo semplicemente
+        caller_state->pc_epc += 4;
+        LDST(caller_state);
     }
-    else if (outProcQ(&READY_Q, p) != NULL)
+
+    outChild(target_pcb);
+    terminateProcessTree(target_pcb);
+
+    if (target_pcb == CURRENT_P)
     {
-        // Era nella Ready Queue (outProcQ lo ha appena rimosso)
+
+        scheduler();
     }
     else
     {
-        // Se non era né il CURRENT_P né nella Ready_Q, è per forza bloccato in un semaforo!
-        int *sem = p->p_semAdd;
-        outBlocked(p); // Rimuove dalla coda dei bloccati (ASL)
-
-        // ATTENZIONE: Se era bloccato su un semaforo di Device o Timer,
-        // devi ricordarti di decrementare SBLOCK_C
-        if (sem >= &SEM_DEV_Q[0].s_key && sem <= &SEM_DEV_Q[SEMDEVLEN - 1].s_key)
-        {
-            SBLOCK_C--;
-        }
+        // Ho ucciso un altro processo
+        caller_state->pc_epc += 4; // Incremento il PC
+        LDST(caller_state);
     }
-
-    // 3. Il colpo di grazia
-    freePcb(p);
-    PROC_C--; // Meno un processo nel sistema globale
 }

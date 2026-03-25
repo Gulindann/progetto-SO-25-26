@@ -10,6 +10,6 @@ extern int SBLOCK_C;     // Contatore dei processi bloccati (Soft Block Count)
 extern pcb_t *CURRENT_P; // Puntatore al processo attualmente in esecuzione
 
 extern struct list_head READY_Q;
-extern semd_t SEM_DEV_Q[SEMDEVLEN];
+extern int SEM_DEV_Q[SEMDEVLEN];
 
 #endif /* INITIAL_H */
