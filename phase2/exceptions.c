@@ -74,10 +74,33 @@ void syscallExceptionHandler(int excCode)
         case TERMPROCESS:
             TerminateProcess(saved_exception_state);
             break;
-        
         case PASSEREN:
             Passeren(saved_exception_state);
             break;
+        case VERHOGEN:
+            Verhogen(saved_exception_state);
+            break;
+        case DOIO:
+            DoIO(saved_exception_state);
+            break;
+        case GETTIME:
+            GetCPUTime(saved_exception_state);
+            break;
+        case CLOCKWAIT:
+            WaitForClock(saved_exception_state);
+            break;
+        case GETSUPPORTPTR:
+            GetSupportData(saved_exception_state);
+            break;
+        case GETPROCESSID:
+            GetProcessId(saved_exception_state);
+            break;
+        case YIELD:
+            Yield(saved_exception_state);
+            break;
+        default:
+            PANIC();
+            
         }
     }
     else
@@ -212,5 +235,55 @@ void Passeren(state_t *caller_state){
         scheduler();
     }
 
+
+}
+
+void Verhogen(state_t *caller_state){
+    int *sem_addr = caller_state->reg_a1;
+    (*sem_addr)++;
+
+    // Sveglio il processo
+    if(*sem_addr >= 0){
+        pcb_t *p = removeBlocked(sem_addr); // Rimuovo dalla coda dei bloccati
+
+    insertProcQ(&READY_Q, p); // Inserisco nella readyQ
+    }
+
+    caller_state->pc_epc += 4;
+    LDST(caller_state);
+}
+
+void DoIo(state_t *caller_state){
+    // Valore boh?
+
+    int *sem_addr = caller_state->reg_a1;
+    insertBlocked(sem_addr, CURRENT_P);
+    caller_state->pc_epc += 4;
+    scheduler();
+
+    // Si risveglia
+}
+
+void GetCPUTime(state_t *caller_state){
+    caller_state->reg_a0 = CURRENT_P->p_time;
+}
+
+
+void WaitForClock(state_t *caller_state){
+
+}
+
+
+void GetSupportData(state_t *caller_state){
+
+}
+
+
+void GetProcessId(state_t *caller_state){
+
+}
+
+
+void Yield(state_t *caller_state){
 
 }
