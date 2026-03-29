@@ -7,6 +7,8 @@
 #include "../../headers/const.h"
 #include "headers/initial.h"
 
+extern cpu_t p_start;
+
 void scheduler();
 
 #endif

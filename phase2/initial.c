@@ -46,7 +46,7 @@ int main()
     insertProcQ(&READY_Q, INIT);
 
     PROC_C++;
-    RAMTOP(INIT->p_s.gpr[2]);
+    RAMTOP(INIT->p_s.reg_sp);
     INIT->p_s.mie = MIE_ALL;
     INIT->p_s.status = MSTATUS_MPIE_MASK | MSTATUS_MPP_M;
     INIT->p_s.pc_epc = (memaddr)test;

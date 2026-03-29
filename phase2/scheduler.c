@@ -1,6 +1,8 @@
 #include "headers/initial.h"
 #include "uriscv/liburiscv.h"
 
+extern cpu_t p_start;
+
 void scheduler()
 {
     while (1)
@@ -31,6 +33,7 @@ void scheduler()
             CURRENT_P = removeProcQ(&READY_Q); // Primo processo della Queue diventa il current process
 
             LDIT(TIMESLICE);
+            STCK(p_start);
             LDST(&CURRENT_P->p_s);
         }
     }

@@ -232,6 +232,16 @@ void Passeren(state_t *caller_state){
         // Semaforo va sotto 0 quindi si blocca
         caller_state->pc_epc += 4;
         insertBlocked(sem_addr, CURRENT_P);
+
+        // Aggiorno p_time
+        cpu_t timenow;
+        STCK(timenow);
+
+        CURRENT_P->p_time = CURRENT_P->p_time + (timenow - p_start);
+
+        // Salvo nuovo stato
+        CURRENT_P->p_s = *caller_state;
+        
         scheduler();
     }
 
@@ -254,18 +264,31 @@ void Verhogen(state_t *caller_state){
 }
 
 void DoIo(state_t *caller_state){
-    // Valore boh?
-
-    int *sem_addr = caller_state->reg_a1;
-    insertBlocked(sem_addr, CURRENT_P);
     caller_state->pc_epc += 4;
+
+    // Aggiorno p_time
+    cpu_t timenow;
+    STCK(timenow);
+
+    CURRENT_P->p_time = CURRENT_P->p_time + (timenow - p_start);
+
+    // Salvo nuovo stato
+    CURRENT_P->p_s = *caller_state;
+
+
     scheduler();
 
-    // Si risveglia
 }
 
 void GetCPUTime(state_t *caller_state){
-    caller_state->reg_a0 = CURRENT_P->p_time;
+    cpu_t timenow;
+    STCK(timenow);
+
+    caller_state->reg_a0 = CURRENT_P->p_time + (timenow - p_start);
+
+    // Sempre aumentare PC e far ripartire processo se non bloccante
+    caller_state->pc_epc += 4;
+    LDST(caller_state);
 }
 
 
