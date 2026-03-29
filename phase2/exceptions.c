@@ -74,6 +74,10 @@ void syscallExceptionHandler(int excCode)
         case TERMPROCESS:
             TerminateProcess(saved_exception_state);
             break;
+        
+        case PASSEREN:
+            Passeren(saved_exception_state);
+            break;
         }
     }
     else
@@ -192,4 +196,20 @@ void TerminateProcess(state_t *caller_state)
         caller_state->pc_epc += 4; // Incremento il PC
         LDST(caller_state);
     }
+}
+
+void Passeren(state_t *caller_state){
+    int *sem_addr = caller_state->reg_a1; // Indirizzo semaforo
+    (*sem_addr)--;
+
+    if(*sem_addr >= 0){
+        caller_state->pc_epc += 4;
+        LDST(caller_state);
+    }else{
+        // Semaforo va sotto 0 quindi si blocca
+        insertBlocked(sem_addr, CURRENT_P);
+        scheduler();
+    }
+
+
 }
