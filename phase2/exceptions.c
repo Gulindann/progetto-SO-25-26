@@ -207,6 +207,7 @@ void Passeren(state_t *caller_state){
         LDST(caller_state);
     }else{
         // Semaforo va sotto 0 quindi si blocca
+        caller_state->pc_epc += 4;
         insertBlocked(sem_addr, CURRENT_P);
         scheduler();
     }
