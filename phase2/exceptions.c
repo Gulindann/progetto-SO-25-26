@@ -303,7 +303,20 @@ void GetSupportData(state_t *caller_state){
 
 
 void GetProcessId(state_t *caller_state){
+    int pid = CURRENT_P->p_pid;
+    if(caller_state->reg_a1 != 0){
+        if(CURRENT_P->p_parent == NULL)
+            pid = 0;
+        else
+            pid = CURRENT_P->p_parent->p_pid;
+        
+    }
 
+    caller_state->reg_a0 = pid;
+
+    // Sempre aumentare PC e far ripartire processo se non bloccante
+    caller_state->pc_epc += 4;
+    LDST(caller_state);
 }
 
 
