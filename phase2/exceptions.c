@@ -100,7 +100,6 @@ void syscallExceptionHandler(int excCode)
             break;
         default:
             PANIC();
-            
         }
     }
     else
@@ -221,66 +220,102 @@ void TerminateProcess(state_t *caller_state)
     }
 }
 
-void Passeren(state_t *caller_state){
-    int *sem_addr = caller_state->reg_a1; // Indirizzo semaforo
+void Passeren(state_t *caller_state)
+{
+    int *sem_addr = (int *)caller_state->reg_a1; // Indirizzo semaforo
     (*sem_addr)--;
 
-    if(*sem_addr >= 0){
+    if (*sem_addr >= 0)
+    {
         caller_state->pc_epc += 4;
         LDST(caller_state);
-    }else{
+    }
+    else
+    {
         // Semaforo va sotto 0 quindi si blocca
         caller_state->pc_epc += 4;
-        insertBlocked(sem_addr, CURRENT_P);
 
         // Aggiorno p_time
         cpu_t timenow;
         STCK(timenow);
 
-        CURRENT_P->p_time = CURRENT_P->p_time + (timenow - p_start);
+        CURRENT_P->p_time += (timenow - p_start);
 
         // Salvo nuovo stato
         CURRENT_P->p_s = *caller_state;
-        
+
+        insertBlocked(sem_addr, CURRENT_P);
+
         scheduler();
     }
-
-
 }
 
-void Verhogen(state_t *caller_state){
-    int *sem_addr = caller_state->reg_a1;
+void Verhogen(state_t *caller_state)
+{
+    int *sem_addr = (int *)caller_state->reg_a1;
     (*sem_addr)++;
 
     // Sveglio il processo
-    if(*sem_addr >= 0){
+    if (*sem_addr <= 0)
+    {
         pcb_t *p = removeBlocked(sem_addr); // Rimuovo dalla coda dei bloccati
 
-    insertProcQ(&READY_Q, p); // Inserisco nella readyQ
+        if (p != NULL)
+        {
+            insertProcQ(&READY_Q, p); // Inserisco nella readyQ
+        }
     }
 
     caller_state->pc_epc += 4;
     LDST(caller_state);
 }
 
-void DoIo(state_t *caller_state){
+void DoIO(state_t *caller_state)
+{
+    unsigned int *commandAddr = caller_state->reg_a1;
+    unsigned int commandValue = caller_state->reg_a2;
+
+    // Calcolo la distanza dall'inizio dei registri device e divido per 16 (0x10)
+    int devIndex = (*commandAddr - START_DEVREG) / 0x10;
+
+    // Gestione speciale per i Terminali (indici base 32-39)
+    if (devIndex >= 32)
+    {
+        // Se l'indirizzo del comando finisce con l'offset 0xC, è un comando di TRASMISSIONE.
+        // Lo spostiamo negli ultimi 8 semafori (indici 40-47)
+        // Posso spiegarlo
+        if ((commandAddr - START_DEVREG) % 0x10 == 0xC)
+        {
+            devIndex += 8;
+        }
+    }
+
+    int *sem_addr = &SEM_DEV_Q[devIndex];
+
+    (*sem_addr)--;
+
     caller_state->pc_epc += 4;
 
     // Aggiorno p_time
     cpu_t timenow;
     STCK(timenow);
 
-    CURRENT_P->p_time = CURRENT_P->p_time + (timenow - p_start);
+    CURRENT_P->p_time += (timenow - p_start);
 
-    // Salvo nuovo stato
     CURRENT_P->p_s = *caller_state;
 
+    // Metto il processo in coda nell'ASL
+    insertBlocked(sem_addr, CURRENT_P);
+    SBLOCK_C++;
+
+    // Scrivo comando nel registro
+    *commandAddr = commandValue;
 
     scheduler();
-
 }
 
-void GetCPUTime(state_t *caller_state){
+void GetCPUTime(state_t *caller_state)
+{
     cpu_t timenow;
     STCK(timenow);
 
@@ -291,25 +326,48 @@ void GetCPUTime(state_t *caller_state){
     LDST(caller_state);
 }
 
+void WaitForClock(state_t *caller_state)
+{
 
-void WaitForClock(state_t *caller_state){
+    // Pseudoclock é ultimo semaforo dei device
+    int *pseudoclock_sem = &SEM_DEV_Q[SEMDEVLEN - 1];
 
+    // Decremento semaforo
+    (*pseudoclock_sem)--;
+
+    caller_state->pc_epc += 4;
+
+    // Aggiorno p_time
+    cpu_t timenow;
+    STCK(timenow);
+
+    CURRENT_P->p_time += (timenow - p_start);
+
+    CURRENT_P->p_s = *caller_state;
+
+    // Blocco sempre, semaforo sincrono, binario
+    insertBlocked(pseudoclock_sem, CURRENT_P);
+    SBLOCK_C++;
+
+    scheduler();
 }
 
-
-void GetSupportData(state_t *caller_state){
-
+void GetSupportData(state_t *caller_state)
+{
+    caller_state->reg_a0 = (unsigned int)CURRENT_P->p_supportStruct;
+    caller_state->pc_epc += 4;
+    LDST(caller_state);
 }
 
-
-void GetProcessId(state_t *caller_state){
+void GetProcessId(state_t *caller_state)
+{
     int pid = CURRENT_P->p_pid;
-    if(caller_state->reg_a1 != 0){
-        if(CURRENT_P->p_parent == NULL)
+    if (caller_state->reg_a1 != 0)
+    {
+        if (CURRENT_P->p_parent == NULL)
             pid = 0;
         else
             pid = CURRENT_P->p_parent->p_pid;
-        
     }
 
     caller_state->reg_a0 = pid;
@@ -319,7 +377,19 @@ void GetProcessId(state_t *caller_state){
     LDST(caller_state);
 }
 
+void Yield(state_t *caller_state)
+{
+    caller_state->pc_epc += 4;
 
-void Yield(state_t *caller_state){
+    // Aggiorno p_time
+    cpu_t timenow;
+    STCK(timenow);
 
+    CURRENT_P->p_time += (timenow - p_start);
+
+    CURRENT_P->p_s = *caller_state;
+
+    insertProcQ(&READY_Q, CURRENT_P);
+
+    scheduler();
 }
