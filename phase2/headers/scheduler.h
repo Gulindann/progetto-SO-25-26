@@ -5,7 +5,7 @@
 #include "../../phase1/headers/asl.h"
 #include "../../phase1/headers/pcb.h"
 #include "../../headers/const.h"
-#include "headers/initial.h"
+#include "initial.h"
 
 extern cpu_t p_start;
 

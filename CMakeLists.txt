@@ -16,8 +16,9 @@ add_executable(MultiPandOS
     ./klog.c 
     phase1/pcb.c phase1/asl.c 
     phase2/initial.c phase2/scheduler.c phase2/interrupts.c phase2/exceptions.c phase2/p2test.c
-    ${URISCV_SRC}/crtso.S ${URISCV_SRC}/liburiscv.S)
-
+    phase2/syscalls.c phase2/tlb.c phase2/traps.c phase2/utils.c
+    ${URISCV_SRC}/crtso.S ${URISCV_SRC}/liburiscv.S
+)
 add_custom_target(
         MultiPandOSuRISCV ALL
         COMMAND uriscv-elf2uriscv -k ${PROJECT_BINARY_DIR}/MultiPandOS

@@ -1,5 +1,7 @@
 #include "headers/initial.h"
 #include "headers/scheduler.h"
+#include "uriscv/liburiscv.h"
+#include "headers/exceptions.h"
 
 int PROC_C;
 int SBLOCK_C;
@@ -7,16 +9,20 @@ struct list_head READY_Q;
 pcb_t *CURRENT_P;
 int SEM_DEV_Q[SEMDEVLEN];
 
+extern void uTLB_RefillHandler();
+
 extern void test();
 
-void uTLB_RefillHandler()
+/*void uTLB_RefillHandler()
 {
-    int prid = getPRID();
+    /*int prid = getPRID();
     setENTRYHI(0x80000000);
     setENTRYLO(0x00000000);
     TLBWR();
     LDST((state_t *)BIOSDATAPAGE);
-}
+
+    PANIC();
+}*/
 
 int main()
 {
@@ -24,7 +30,7 @@ int main()
     passupvector_t *passupvector = (passupvector_t *)PASSUPVECTOR;
     passupvector->tlb_refill_handler = (memaddr)uTLB_RefillHandler;
     passupvector->tlb_refill_stackPtr = KERNELSTACK;
-    // passupvector->exception_handler = (memaddr)exceptionHandler;
+    passupvector->exception_handler = (memaddr)exceptionHandler;
     passupvector->exception_stackPtr = KERNELSTACK;
 
     initPcbs();

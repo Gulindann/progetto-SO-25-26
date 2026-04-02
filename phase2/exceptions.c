@@ -1,10 +1,4 @@
 #include "headers/exceptions.h"
-#include "headers/syscalls.h"
-#include "headers/tlb.h"
-#include "headers/traps.h"
-#include "headers/interrupts.h" // Assumendo che tu abbia già questo header
-#include "uriscv/liburiscv.h"
-#include "../../headers/const.h"
 
 void exceptionHandler()
 {
