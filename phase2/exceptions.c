@@ -13,7 +13,7 @@ void exceptionHandler()
     }
 
     // 3. Estraggo l'Exception Code "pulito" mascherando i bit del Cause Register
-    unsigned int excCode = cause_reg & GETEXECCODE;
+    unsigned int excCode = cause_reg & CAUSE_EXCCODE_MASK;
 
     // 4. Guardo il codice dell'eccezione, faccio lo switch e smisto sulle altre funzioni
     switch (excCode)
