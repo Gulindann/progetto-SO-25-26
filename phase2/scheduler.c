@@ -11,7 +11,7 @@ void scheduler()
         {
             CURRENT_P = removeProcQ(&READY_Q);
 
-            LDIT(TIMESLICE);
+            setTIMER(TIMESLICE);
             STCK(p_start);
             LDST(&CURRENT_P->p_s);
         }
@@ -28,6 +28,7 @@ void scheduler()
             }
             else if (PROC_C > 0 && SBLOCK_C > 0) // Attesa di device interrupt
             {
+                CURRENT_P = NULL;
                 // Ringraziamento speciale al carissimo e stimatissimo Dott. Rovelli
                 setMIE(MIE_ALL & ~MIE_MTIE_MASK);
                 unsigned int status = getSTATUS();

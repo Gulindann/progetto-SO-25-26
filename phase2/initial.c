@@ -15,7 +15,7 @@ extern void test();
 
 /*void uTLB_RefillHandler()
 {
-    /*int prid = getPRID();
+    int prid = getPRID();
     setENTRYHI(0x80000000);
     setENTRYLO(0x00000000);
     TLBWR();

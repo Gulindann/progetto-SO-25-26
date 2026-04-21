@@ -218,7 +218,6 @@ void Verhogen(state_t *caller_state)
 
 void DoIO(state_t *caller_state)
 {
-    // Fix: non usare puntatori per la matematica!
     unsigned int commandAddr = caller_state->reg_a1;
     unsigned int commandValue = caller_state->reg_a2;
 
@@ -245,7 +244,6 @@ void DoIO(state_t *caller_state)
     insertBlocked(sem_addr, CURRENT_P);
     SBLOCK_C++;
 
-    // Fix: ora converto in puntatore e scrivo nel device fisico
     unsigned int *physicalAddr = (unsigned int *)commandAddr;
     *physicalAddr = commandValue;
 
@@ -284,7 +282,6 @@ void WaitForClock(state_t *caller_state)
 
 void GetSupportData(state_t *caller_state)
 {
-    // Fix: rimosso l'asterisco errato
     caller_state->reg_a0 = (unsigned int)CURRENT_P->p_supportStruct;
     caller_state->pc_epc += 4;
     LDST(caller_state);
@@ -316,7 +313,10 @@ void Yield(state_t *caller_state)
     CURRENT_P->p_time += (timenow - p_start);
 
     CURRENT_P->p_s = *caller_state;
+
     insertProcQ(&READY_Q, CURRENT_P);
+
+    // list_add_tail(&READY_Q, CURRENT_P); // Vuole essere ultimo in coda anche se con max priority prendere containerof di currentp TODO
 
     scheduler();
 }

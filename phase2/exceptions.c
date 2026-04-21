@@ -5,11 +5,13 @@ void exceptionHandler()
     // 1. Leggo l'intero Cause Register
     unsigned int cause_reg = getCAUSE();
 
-    // 2. Controllo se è un interrupt passando il registro alla macro
     if (CAUSE_IS_INT(cause_reg))
     {
-        interruptHandler(cause_reg); // Hardware, timer o periferiche
-        return;
+        interruptHandler(cause_reg);
+
+        // Se arrivi qui, interruptHandler ha fallito a fare la LDST.
+        // Togli il return; e metti PANIC così capiamo se ci sfugge un interrupt!
+        PANIC();
     }
 
     // 3. Estraggo l'Exception Code "pulito" mascherando i bit del Cause Register
