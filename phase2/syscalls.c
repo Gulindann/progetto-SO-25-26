@@ -60,14 +60,14 @@ void syscallExceptionHandler(int excCode)
             break;
         default:
             // Syscall non riconosciuta: Pass Up or Die simulando una Trap
-            trapExceptionHandler(excCode);
+            passUpOrDie(GENERALEXCEPT);
             break;
         }
     }
     else
     {
         // User mode: simulare Program Trap
-        trapExceptionHandler(excCode);
+         passUpOrDie(GENERALEXCEPT);
     }
 }
 
@@ -148,9 +148,7 @@ void TerminateProcess(state_t *caller_state)
     {
         pcb_t *root = CURRENT_P;
         while (root->p_parent != NULL)
-        {
             root = root->p_parent;
-        }
         target_pcb = findPcbByPid(root, target_pid);
     }
 
@@ -160,10 +158,13 @@ void TerminateProcess(state_t *caller_state)
         LDST(caller_state);
     }
 
+    // ← AGGIUNGERE: salva se CURRENT_P è nella progenie del target
+    int current_will_die = (target_pcb == CURRENT_P) || isDescendant(target_pcb, CURRENT_P);
+
     outChild(target_pcb);
     terminateProcessTree(target_pcb);
 
-    if (target_pcb == CURRENT_P)
+    if (current_will_die)   // ← usa questo flag invece di confrontare target_pcb == CURRENT_P
     {
         scheduler();
     }
@@ -172,6 +173,13 @@ void TerminateProcess(state_t *caller_state)
         caller_state->pc_epc += 4;
         LDST(caller_state);
     }
+}
+
+int isDescendant(pcb_t *ancestor, pcb_t *p)
+{
+    if (p == NULL) return 0;
+    if (p->p_parent == ancestor) return 1;
+    return isDescendant(ancestor, p->p_parent);
 }
 
 void Passeren(state_t *caller_state)

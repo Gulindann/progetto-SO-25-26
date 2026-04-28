@@ -1,6 +1,12 @@
 #ifndef TRAPS_H
 #define TRAPS_H
 
-void trapExceptionHandler(int excCode);
+#include "initial.h"
+#include "uriscv/liburiscv.h"
+#include "../../headers/const.h"
 
-#endif /* TRAPS_H */
+void trapExceptionHandler(int excCode);
+void passUpOrDie(int exceptionType);  // <-- aggiungere
+
+#endif
+

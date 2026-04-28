@@ -144,9 +144,8 @@ void uTLB_RefillHandler()
 /*                                                                   */
 void test()
 {
-    print("cuulo\n");
+    
     SYSCALL(VERHOGEN, (int)&sem_testsem, 0, 0); /* V(sem_testsem)   */
-    print("cuulone\n");
     SYSCALL(VERHOGEN, (int)&sem_testsem, 0, 0);
     SYSCALL(VERHOGEN, (int)&sem_testsem, 0, 0);
 
@@ -325,9 +324,12 @@ void test()
         /* Reset semaphores */
         sem_blkp8 = 0;
         sem_endp8 = 0;
+        print("CULO1\n");
         for (int i = 0; i < NOLEAVES; i++)
         {
+            
             sem_endcreate[i] = 0;
+            print("CULONE2");
         }
 
         p8pid = SYSCALL(CREATEPROCESS, (int)&p8rootstate, PROCESS_PRIO_LOW, (int)NULL);

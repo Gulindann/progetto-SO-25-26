@@ -59,7 +59,6 @@ void PseudoClock()
     while (*pseudoclock_sem < 0)
     {
         (*pseudoclock_sem)++;
-
         pcb_t *p = removeBlocked(pseudoclock_sem);
         if (p != NULL)
         {
@@ -70,6 +69,12 @@ void PseudoClock()
 
     if (CURRENT_P != NULL)
     {
+        // ← AGGIUNGERE: addebita il tempo trascorso al processo corrente
+        cpu_t timenow;
+        STCK(timenow);
+        CURRENT_P->p_time += (timenow - p_start);
+        STCK(p_start); // resetta p_start per il prossimo intervallo
+
         LDST(saved_interrupt_state);
     }
     else
@@ -166,6 +171,11 @@ void DeviceInterrupt(int line)
     {
         // NON addebitiamo il tempo, NON lo mettiamo in coda. Ridiamo subito la CPU al
         // processo che stava girando, esattamente da dove l'interrupt lo aveva interrotto.
+        cpu_t timenow;
+        STCK(timenow);
+        CURRENT_P->p_time += (timenow - p_start);
+        STCK(p_start);
+
         LDST(saved_interrupt_state);
     }
     else
