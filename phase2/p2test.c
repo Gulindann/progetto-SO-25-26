@@ -316,7 +316,11 @@ void test()
 
     print("p1 knows p5 ended\n");
 
+    
+
     SYSCALL(PASSEREN, (int)&sem_blkp4, 0, 0); /* P(sem_blkp4)		*/
+
+
 
     /* now for a more rigorous check of process termination */
     for (p8inc = 0; p8inc < 4; p8inc++)
@@ -324,12 +328,12 @@ void test()
         /* Reset semaphores */
         sem_blkp8 = 0;
         sem_endp8 = 0;
-        print("CULO1\n");
+        
         for (int i = 0; i < NOLEAVES; i++)
         {
             
             sem_endcreate[i] = 0;
-            print("CULONE2");
+            
         }
 
         p8pid = SYSCALL(CREATEPROCESS, (int)&p8rootstate, PROCESS_PRIO_LOW, (int)NULL);

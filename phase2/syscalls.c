@@ -112,25 +112,41 @@ pcb_t *findPcbByPid(pcb_t *root, int target_pid)
 
 void terminateProcessTree(pcb_t *p)
 {
+    // 1. Uccidiamo tutti i figli ricorsivamente
     while (!emptyChild(p))
     {
         terminateProcessTree(removeChild(p));
     }
 
-    if (p != CURRENT_P)
+    // 2. Rimuoviamo il processo dalle code in cui si trova
+    if (p == CURRENT_P)
     {
+        // Se stiamo uccidendo il processo in esecuzione, azzeriamo il puntatore!
+        CURRENT_P = NULL;
+    }
+    else
+    {
+        // Se non è CURRENT_P, deve essere in READY_Q oppure Bloccato
         if (outProcQ(&READY_Q, p) == NULL)
         {
-            int *sem = p->p_semAdd;
-            outBlocked(p);
-
-            if (sem >= &SEM_DEV_Q[0] && sem <= &SEM_DEV_Q[SEMDEVLEN - 1])
+            // Non era in READY_Q, quindi è bloccato su un semaforo
+            if (p->p_semAdd != NULL)
             {
-                SBLOCK_C--;
+                int *sem = p->p_semAdd;
+                outBlocked(p); // Lo scolleghiamo dalla coda del semaforo
+
+                (*sem)++;
+
+                // Se era un semaforo dei device o del clock, aggiorniamo SBLOCK_C
+                if (sem >= &SEM_DEV_Q[0] && sem <= &SEM_DEV_Q[SEMDEVLEN - 1])
+                {
+                    SBLOCK_C--;
+                }
             }
         }
     }
 
+    // 3. Lo rimettiamo tra i PCB liberi
     freePcb(p);
     PROC_C--;
 }
@@ -140,6 +156,7 @@ void TerminateProcess(state_t *caller_state)
     int target_pid = caller_state->reg_a1;
     pcb_t *target_pcb = NULL;
 
+    // 1. Troviamo il PCB bersaglio
     if (target_pid == 0)
     {
         target_pcb = CURRENT_P;
@@ -147,29 +164,36 @@ void TerminateProcess(state_t *caller_state)
     else
     {
         pcb_t *root = CURRENT_P;
+        // Risaliamo fino al vero "root" dell'albero come da tua logica
         while (root->p_parent != NULL)
+        {
             root = root->p_parent;
+        }
         target_pcb = findPcbByPid(root, target_pid);
     }
 
+    // Se non troviamo il processo, ignoriamo e andiamo avanti
     if (target_pcb == NULL)
     {
         caller_state->pc_epc += 4;
         LDST(caller_state);
     }
 
-    // ← AGGIUNGERE: salva se CURRENT_P è nella progenie del target
-    int current_will_die = (target_pcb == CURRENT_P) || isDescendant(target_pcb, CURRENT_P);
-
+    // 2. Lo sganciamo dall'albero genealogico genitore
     outChild(target_pcb);
+
+    // 3. Uccidiamo l'intero albero radicato in target_pcb
     terminateProcessTree(target_pcb);
 
-    if (current_will_die)   // ← usa questo flag invece di confrontare target_pcb == CURRENT_P
+    // 4. Se il processo che stava chiamando la Syscall è morto (o perché si è 
+    //    suicidato, o perché ha ucciso un genitore), chiamiamo lo scheduler.
+    if (CURRENT_P == NULL)
     {
         scheduler();
     }
     else
     {
+        // Se ha ucciso qualcun altro ma lui è sopravvissuto, riprende l'esecuzione.
         caller_state->pc_epc += 4;
         LDST(caller_state);
     }
@@ -202,6 +226,7 @@ void Passeren(state_t *caller_state)
 
         CURRENT_P->p_s = *caller_state;
         insertBlocked(sem_addr, CURRENT_P);
+        CURRENT_P = NULL;
         scheduler();
     }
 }
@@ -255,6 +280,7 @@ void DoIO(state_t *caller_state)
     unsigned int *physicalAddr = (unsigned int *)commandAddr;
     *physicalAddr = commandValue;
 
+    CURRENT_P = NULL;
     scheduler();
 }
 
@@ -263,11 +289,14 @@ void GetCPUTime(state_t *caller_state)
     cpu_t timenow;
     STCK(timenow);
 
-    caller_state->reg_a0 = CURRENT_P->p_time + (timenow - p_start);
+    CURRENT_P -> p_time += (timenow - p_start);
+
+    caller_state->reg_a0 = (CURRENT_P->p_time) / (*((cpu_t *)TIMESCALEADDR));
 
     caller_state->pc_epc += 4;
     LDST(caller_state);
 }
+
 
 void WaitForClock(state_t *caller_state)
 {
@@ -285,6 +314,7 @@ void WaitForClock(state_t *caller_state)
     insertBlocked(pseudoclock_sem, CURRENT_P);
     SBLOCK_C++;
 
+    CURRENT_P = NULL;
     scheduler();
 }
 
@@ -325,6 +355,6 @@ void Yield(state_t *caller_state)
     insertProcQ(&READY_Q, CURRENT_P);
 
     // list_add_tail(&READY_Q, CURRENT_P); // Vuole essere ultimo in coda anche se con max priority prendere containerof di currentp TODO
-
+    CURRENT_P = NULL; 
     scheduler();
 }

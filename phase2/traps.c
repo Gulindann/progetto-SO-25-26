@@ -11,6 +11,7 @@ void passUpOrDie(int exceptionType)
         // Riusa la logica di TerminateProcess con target = CURRENT_P
         outChild(CURRENT_P);
         terminateProcessTree(CURRENT_P);
+        CURRENT_P = NULL;
         scheduler();
     }
     else
