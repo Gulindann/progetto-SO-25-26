@@ -10,3 +10,12 @@ void *memcpy(void *dest, const void *src, unsigned int n)
     }
     return dest;
 }
+
+void updateCpuTime()
+{
+    cpu_t timenow;
+    STCK(timenow);
+    currentProcess->p_time += (timenow - p_start);
+
+    p_start = timenow;
+}

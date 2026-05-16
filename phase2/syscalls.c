@@ -67,7 +67,7 @@ void syscallExceptionHandler(int excCode)
     else
     {
         // User mode: simulare Program Trap
-         passUpOrDie(GENERALEXCEPT);
+        passUpOrDie(GENERALEXCEPT);
     }
 }
 
@@ -84,9 +84,9 @@ void CreateProcess(state_t *caller_state)
         INIT->p_prio = caller_state->reg_a2;
         INIT->p_supportStruct = (support_t *)caller_state->reg_a3;
 
-        insertProcQ(&READY_Q, INIT);
-        insertChild(CURRENT_P, INIT);
-        PROC_C++;
+        insertProcQ(&readyQueue, INIT);
+        insertChild(currentProcess, INIT);
+        processCount++;
 
         caller_state->reg_a0 = INIT->p_pid;
     }
@@ -119,15 +119,15 @@ void terminateProcessTree(pcb_t *p)
     }
 
     // 2. Rimuoviamo il processo dalle code in cui si trova
-    if (p == CURRENT_P)
+    if (p == currentProcess)
     {
         // Se stiamo uccidendo il processo in esecuzione, azzeriamo il puntatore!
-        CURRENT_P = NULL;
+        currentProcess = NULL;
     }
     else
     {
         // Se non è CURRENT_P, deve essere in READY_Q oppure Bloccato
-        if (outProcQ(&READY_Q, p) == NULL)
+        if (outProcQ(&readyQueue, p) == NULL)
         {
             // Non era in READY_Q, quindi è bloccato su un semaforo
             if (p->p_semAdd != NULL)
@@ -138,9 +138,9 @@ void terminateProcessTree(pcb_t *p)
                 (*sem)++;
 
                 // Se era un semaforo dei device o del clock, aggiorniamo SBLOCK_C
-                if (sem >= &SEM_DEV_Q[0] && sem <= &SEM_DEV_Q[SEMDEVLEN - 1])
+                if (sem >= &deviceSemaphores[0] && sem <= &deviceSemaphores[SEMDEVLEN - 1])
                 {
-                    SBLOCK_C--;
+                    softBlockCount--;
                 }
             }
         }
@@ -148,7 +148,7 @@ void terminateProcessTree(pcb_t *p)
 
     // 3. Lo rimettiamo tra i PCB liberi
     freePcb(p);
-    PROC_C--;
+    processCount--;
 }
 
 void TerminateProcess(state_t *caller_state)
@@ -159,11 +159,11 @@ void TerminateProcess(state_t *caller_state)
     // 1. Troviamo il PCB bersaglio
     if (target_pid == 0)
     {
-        target_pcb = CURRENT_P;
+        target_pcb = currentProcess;
     }
     else
     {
-        pcb_t *root = CURRENT_P;
+        pcb_t *root = currentProcess;
         // Risaliamo fino al vero "root" dell'albero come da tua logica
         while (root->p_parent != NULL)
         {
@@ -185,9 +185,9 @@ void TerminateProcess(state_t *caller_state)
     // 3. Uccidiamo l'intero albero radicato in target_pcb
     terminateProcessTree(target_pcb);
 
-    // 4. Se il processo che stava chiamando la Syscall è morto (o perché si è 
+    // 4. Se il processo che stava chiamando la Syscall è morto (o perché si è
     //    suicidato, o perché ha ucciso un genitore), chiamiamo lo scheduler.
-    if (CURRENT_P == NULL)
+    if (currentProcess == NULL)
     {
         scheduler();
     }
@@ -201,8 +201,10 @@ void TerminateProcess(state_t *caller_state)
 
 int isDescendant(pcb_t *ancestor, pcb_t *p)
 {
-    if (p == NULL) return 0;
-    if (p->p_parent == ancestor) return 1;
+    if (p == NULL)
+        return 0;
+    if (p->p_parent == ancestor)
+        return 1;
     return isDescendant(ancestor, p->p_parent);
 }
 
@@ -220,13 +222,11 @@ void Passeren(state_t *caller_state)
     {
         caller_state->pc_epc += 4;
 
-        cpu_t timenow;
-        STCK(timenow);
-        CURRENT_P->p_time += (timenow - p_start);
+        updateCpuTime();
 
-        CURRENT_P->p_s = *caller_state;
-        insertBlocked(sem_addr, CURRENT_P);
-        CURRENT_P = NULL;
+        currentProcess->p_s = *caller_state;
+        insertBlocked(sem_addr, currentProcess);
+        currentProcess = NULL;
         scheduler();
     }
 }
@@ -241,7 +241,7 @@ void Verhogen(state_t *caller_state)
         pcb_t *p = removeBlocked(sem_addr);
         if (p != NULL)
         {
-            insertProcQ(&READY_Q, p);
+            insertProcQ(&readyQueue, p);
         }
     }
 
@@ -264,76 +264,69 @@ void DoIO(state_t *caller_state)
         }
     }
 
-    int *sem_addr = &SEM_DEV_Q[devIndex];
+    int *sem_addr = &deviceSemaphores[devIndex];
     (*sem_addr)--;
 
     caller_state->pc_epc += 4;
 
-    cpu_t timenow;
-    STCK(timenow);
-    CURRENT_P->p_time += (timenow - p_start);
-    CURRENT_P->p_s = *caller_state;
+    updateCpuTime();
 
-    insertBlocked(sem_addr, CURRENT_P);
-    SBLOCK_C++;
+    currentProcess->p_s = *caller_state;
+
+    insertBlocked(sem_addr, currentProcess);
+    softBlockCount++;
 
     unsigned int *physicalAddr = (unsigned int *)commandAddr;
     *physicalAddr = commandValue;
 
-    CURRENT_P = NULL;
+    currentProcess = NULL;
     scheduler();
 }
 
 void GetCPUTime(state_t *caller_state)
 {
-    cpu_t timenow;
-    STCK(timenow);
+    updateCpuTime();
 
-    CURRENT_P -> p_time += (timenow - p_start);
-
-    caller_state->reg_a0 = (CURRENT_P->p_time) / (*((cpu_t *)TIMESCALEADDR));
+    caller_state->reg_a0 = (currentProcess->p_time) / (*((cpu_t *)TIMESCALEADDR));
 
     caller_state->pc_epc += 4;
     LDST(caller_state);
 }
 
-
 void WaitForClock(state_t *caller_state)
 {
-    int *pseudoclock_sem = &SEM_DEV_Q[SEMDEVLEN - 1];
+    int *pseudoclock_sem = &deviceSemaphores[SEMDEVLEN - 1];
     (*pseudoclock_sem)--;
 
     caller_state->pc_epc += 4;
 
-    cpu_t timenow;
-    STCK(timenow);
-    CURRENT_P->p_time += (timenow - p_start);
+    updateCpuTime();
 
-    CURRENT_P->p_s = *caller_state;
+    currentProcess->p_s = *caller_state;
 
-    insertBlocked(pseudoclock_sem, CURRENT_P);
-    SBLOCK_C++;
+    insertBlocked(pseudoclock_sem, currentProcess);
+    softBlockCount++;
 
-    CURRENT_P = NULL;
+    currentProcess = NULL;
     scheduler();
 }
 
 void GetSupportData(state_t *caller_state)
 {
-    caller_state->reg_a0 = (unsigned int)CURRENT_P->p_supportStruct;
+    caller_state->reg_a0 = (unsigned int)currentProcess->p_supportStruct;
     caller_state->pc_epc += 4;
     LDST(caller_state);
 }
 
 void GetProcessId(state_t *caller_state)
 {
-    int pid = CURRENT_P->p_pid;
+    int pid = currentProcess->p_pid;
     if (caller_state->reg_a1 != 0)
     {
-        if (CURRENT_P->p_parent == NULL)
+        if (currentProcess->p_parent == NULL)
             pid = 0;
         else
-            pid = CURRENT_P->p_parent->p_pid;
+            pid = currentProcess->p_parent->p_pid;
     }
 
     caller_state->reg_a0 = pid;
@@ -346,15 +339,13 @@ void Yield(state_t *caller_state)
 {
     caller_state->pc_epc += 4;
 
-    cpu_t timenow;
-    STCK(timenow);
-    CURRENT_P->p_time += (timenow - p_start);
+    updateCpuTime();
 
-    CURRENT_P->p_s = *caller_state;
+    currentProcess->p_s = *caller_state;
 
-    insertProcQ(&READY_Q, CURRENT_P);
+    insertProcQ(&deviceSemaphores, currentProcess);
 
     // list_add_tail(&READY_Q, CURRENT_P); // Vuole essere ultimo in coda anche se con max priority prendere containerof di currentp TODO
-    CURRENT_P = NULL; 
+    currentProcess = NULL;
     scheduler();
 }

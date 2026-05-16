@@ -7,29 +7,30 @@ void scheduler()
 {
     while (1)
 
-        if (!emptyProcQ(&READY_Q))
+        if (!emptyProcQ(&readyQueue))
         {
-            CURRENT_P = removeProcQ(&READY_Q);
+            // Caricamento processo
+
+            currentProcess = removeProcQ(&readyQueue);
 
             setTIMER(TIMESLICE);
             STCK(p_start);
-            LDST(&CURRENT_P->p_s);
+            LDST(&currentProcess->p_s);
         }
         else
         {
-            if (PROC_C == 0) // Nessun processo in esecuzione
+            if (processCount == 0) // Nessun processo in esecuzione
             {
-                // Termina
                 HALT();
             }
-            else if (PROC_C > 0 && SBLOCK_C == 0) // Deadlock
+            else if (processCount > 0 && softBlockCount == 0) // Deadlock
             {
                 PANIC();
             }
-            else if (PROC_C > 0 && SBLOCK_C > 0) // Attesa di device interrupt
+            else if (processCount > 0 && softBlockCount > 0) // Attesa di device interrupt
             {
-                CURRENT_P = NULL;
-                // Ringraziamento speciale al carissimo e stimatissimo Dott. Rovelli
+                currentProcess = NULL;
+
                 setMIE(MIE_ALL & ~MIE_MTIE_MASK);
                 unsigned int status = getSTATUS();
                 status |= MSTATUS_MIE_MASK;

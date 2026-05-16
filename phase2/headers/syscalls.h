@@ -4,6 +4,7 @@
 #include "../../phase1/headers/asl.h"
 #include "../../phase1/headers/pcb.h"
 #include "../../headers/const.h"
+#include "utils.h"
 
 void syscallExceptionHandler(int excCode);
 
