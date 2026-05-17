@@ -343,7 +343,7 @@ void Yield(state_t *caller_state)
 
     currentProcess->p_s = *caller_state;
 
-    insertProcQ(&deviceSemaphores, currentProcess);
+    insertProcQ(&readyQueue, currentProcess);
 
     // list_add_tail(&READY_Q, CURRENT_P); // Vuole essere ultimo in coda anche se con max priority prendere containerof di currentp TODO
     currentProcess = NULL;

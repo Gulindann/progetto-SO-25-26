@@ -36,15 +36,15 @@ void PLT()
 
     setTIMER(TIMESLICE);
 
-    if (CURRENT_P != NULL)
+    if (currentProcess != NULL)
     {
-        CURRENT_P->p_s = *saved_interrupt_state;
+        currentProcess->p_s = *saved_interrupt_state;
 
         cpu_t timenow;
         STCK(timenow);
-        CURRENT_P->p_time += (timenow - p_start);
+        currentProcess->p_time += (timenow - p_start);
 
-        insertProcQ(&READY_Q, CURRENT_P);
+        insertProcQ(&readyQueue, currentProcess);
     }
 
     scheduler();
@@ -54,7 +54,7 @@ void PseudoClock()
 {
     LDIT(PSECOND);
 
-    int *pseudoclock_sem = &SEM_DEV_Q[SEMDEVLEN - 1];
+    int *pseudoclock_sem = &deviceSemaphores[SEMDEVLEN - 1];
 
     while (*pseudoclock_sem < 0)
     {
@@ -62,17 +62,17 @@ void PseudoClock()
         pcb_t *p = removeBlocked(pseudoclock_sem);
         if (p != NULL)
         {
-            insertProcQ(&READY_Q, p);
-            SBLOCK_C--;
+            insertProcQ(&readyQueue, p);
+            softBlockCount--;
         }
     }
 
-    if (CURRENT_P != NULL)
+    if (currentProcess != NULL)
     {
         // ← AGGIUNGERE: addebita il tempo trascorso al processo corrente
         cpu_t timenow;
         STCK(timenow);
-        CURRENT_P->p_time += (timenow - p_start);
+        currentProcess->p_time += (timenow - p_start);
         STCK(p_start); // resetta p_start per il prossimo intervallo
 
         LDST(saved_interrupt_state);
@@ -105,7 +105,7 @@ void DeviceInterrupt(int line)
     if (DevNo == -1)
     {
         // NON FARE RETURN! Torna tranquillamente a chi stavi eseguendo
-        if (CURRENT_P != NULL)
+        if (currentProcess != NULL)
             LDST(saved_interrupt_state);
         else
             scheduler();
@@ -146,7 +146,7 @@ void DeviceInterrupt(int line)
     }
 
     // 4. Perform a V operation sul semaforo corretto
-    int *sem_addr = &SEM_DEV_Q[sem_index];
+    int *sem_addr = &deviceSemaphores[sem_index];
     (*sem_addr)++;
 
     // Controlliamo se c'era un processo ad aspettare questo device
@@ -159,21 +159,21 @@ void DeviceInterrupt(int line)
             p->p_s.reg_a0 = status;
 
             // 6. Inserisco il processo sbloccato nella Ready Queue
-            insertProcQ(&READY_Q, p);
-            SBLOCK_C--; // Tengo aggiornato il contatore dei bloccati per evitare i finti Deadlock
+            insertProcQ(&readyQueue, p);
+            softBlockCount--; // Tengo aggiornato il contatore dei bloccati per evitare i finti Deadlock
         }
     }
     // (Punto 8 della spec: se p è NULL o il semaforo era > 0, non facciamo nulla. Significa
     // che il processo che aspettava è stato terminato (TerminateProcess) nel frattempo).
 
     // 7. Ritorno del controllo (IDENTICO allo PseudoClock!)
-    if (CURRENT_P != NULL)
+    if (currentProcess != NULL)
     {
         // NON addebitiamo il tempo, NON lo mettiamo in coda. Ridiamo subito la CPU al
         // processo che stava girando, esattamente da dove l'interrupt lo aveva interrotto.
         cpu_t timenow;
         STCK(timenow);
-        CURRENT_P->p_time += (timenow - p_start);
+        currentProcess->p_time += (timenow - p_start);
         STCK(p_start);
 
         LDST(saved_interrupt_state);

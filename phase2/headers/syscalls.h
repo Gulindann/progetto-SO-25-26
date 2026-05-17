@@ -8,4 +8,6 @@
 
 void syscallExceptionHandler(int excCode);
 
+void terminateProcessTree(pcb_t *p);
+
 #endif /* SYSCALLS_H */
