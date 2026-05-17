@@ -34,7 +34,7 @@ It builds upon the Level 2 data structures to provide:
 
 The implementation targets the **µRISCV** architecture.
 
-## Files (Phase 2 additions)
+## Files 
 * `initial.c`: System boot, Level 2 data structure initialization, and first process execution.
 * `scheduler.c`: The preemptive Round-Robin scheduler and CPU idle state (WAIT) management.
 * `syscalls.c`: Implementation of the 10 Nucleus service calls (NSYS1-NSYS10).
