@@ -1,14 +1,11 @@
-
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 
-#include "../../phase1/headers/asl.h"
-#include "../../phase1/headers/pcb.h"
-#include "../../headers/const.h"
+#include "../../headers/types.h" /* cpu_t */
 #include "initial.h"
 
 extern cpu_t p_start;
 
-void scheduler();
+void scheduler(void);
 
-#endif
+#endif /* SCHEDULER_H */

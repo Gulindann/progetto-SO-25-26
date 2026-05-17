@@ -1,14 +1,15 @@
 #include "headers/traps.h"
 #include "headers/initial.h"
 #include "headers/syscalls.h"
-#include "uriscv/liburiscv.h"
+#include "headers/scheduler.h"
+#include "../headers/types.h"
+#include <uriscv/liburiscv.h>
 
 void passUpOrDie(int exceptionType)
 {
     if (currentProcess->p_supportStruct == NULL)
     {
-        // "Die": termina il processo corrente e tutta la sua progenie
-        // Riusa la logica di TerminateProcess con target = CURRENT_P
+        // Die: terminate the current process and all its progeny
         outChild(currentProcess);
         terminateProcessTree(currentProcess);
         currentProcess = NULL;
@@ -16,11 +17,11 @@ void passUpOrDie(int exceptionType)
     }
     else
     {
-        // "Pass Up": copia lo stato salvato nella Support Structure
+        // Pass Up: copy the saved state to the support structure
         state_t *saved = GET_EXCEPTION_STATE_PTR(0);
         currentProcess->p_supportStruct->sup_exceptState[exceptionType] = *saved;
 
-        // Passa il controllo al Support Level tramite LDCXT
+        // Load the context from the support structure via LDCXT
         context_t *ctx = &currentProcess->p_supportStruct->sup_exceptContext[exceptionType];
         LDCXT(ctx->stackPtr, ctx->status, ctx->pc);
     }

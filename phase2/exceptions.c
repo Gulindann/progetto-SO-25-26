@@ -1,43 +1,41 @@
 #include "headers/exceptions.h"
+#include "headers/syscalls.h"
+#include "headers/tlb.h"
+#include "headers/traps.h"
+#include "headers/interrupts.h"
+#include "../headers/const.h"
+#include <uriscv/cpu.h>
+#include <uriscv/liburiscv.h>
 
 void exceptionHandler()
 {
-    // 1. Leggo l'intero Cause Register
-    unsigned int cause_reg = getCAUSE();
+    // Read the cause register
+    unsigned int causeReg = getCAUSE();
 
-    if (CAUSE_IS_INT(cause_reg))
+    // Pass control to interrupt handler if it's an interrupt
+    if (CAUSE_IS_INT(causeReg))
     {
-        interruptHandler(cause_reg);
+        interruptHandler(causeReg);
 
-        // Se arrivi qui, interruptHandler ha fallito a fare la LDST.
-        // Togli il return; e metti PANIC così capiamo se ci sfugge un interrupt!
+        // System should not reach here
         PANIC();
     }
 
-    // 3. Estraggo l'Exception Code "pulito" mascherando i bit del Cause Register
-    unsigned int excCode = cause_reg & CAUSE_EXCCODE_MASK;
+    // Extract the exception code
+    unsigned int excCode = causeReg & CAUSE_EXCCODE_MASK;
 
-    // 4. Guardo il codice dell'eccezione, faccio lo switch e smisto sulle altre funzioni
+    // Dispatch the exception to the appropriate handler
     switch (excCode)
     {
-    case 8:
+    case SYSEXCEPTION: // 8
     case 11:
         syscallExceptionHandler(excCode);
         break;
-
     case 24 ... 28:
         tlbExceptionHandler(excCode);
         break;
-
-    case 0 ... 7:
-    case 9:
-    case 10:
-    case 12 ... 23:
-        trapExceptionHandler(excCode);
-        break;
-
     default:
-        PANIC();
+        trapExceptionHandler(excCode);
         break;
     }
 }

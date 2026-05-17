@@ -1,5 +1,11 @@
 #include "headers/utils.h"
+#include "headers/initial.h"
+#include "headers/scheduler.h"
+#include <uriscv/liburiscv.h>
 
+// Standard memory copy utility
+// This is required because the compiler generates implicit calls to memcpy
+// when performing assignments of large structures like state_t.
 void *memcpy(void *dest, const void *src, unsigned int n)
 {
     char *d = (char *)dest;
@@ -11,11 +17,25 @@ void *memcpy(void *dest, const void *src, unsigned int n)
     return dest;
 }
 
+// Update the accumulated CPU time for the current process
 void updateCpuTime()
 {
-    cpu_t timenow;
-    STCK(timenow);
-    currentProcess->p_time += (timenow - p_start);
+    // Time accounting is only performed if a process is currently running
+    if (currentProcess != NULL)
+    {
+        cpu_t timeNow;
+        // Capture current TOD clock value
+        STCK(timeNow);
 
-    p_start = timenow;
+        // Add the duration of the last execution interval to the total p_time
+        currentProcess->p_time += (timeNow - p_start);
+
+        // Reset the interval start point for the next measurement
+        p_start = timeNow;
+    }
+    else
+    {
+        // If the CPU was idle (WAIT state), just reset the reference timer
+        STCK(p_start);
+    }
 }
