@@ -1,10 +1,10 @@
-# PandOSsh - Phase 1
-
 ## Team Members
 * Riccardo Gadani
 * Walid Birdaha
 * Alexander Kapllanaj
 * Lorenzo Novi
+
+# PandOSsh - Phase 1
 
 ## Project Description
 This project implements **Level 2 (The Queues Manager)** of the PandOSsh operating system.
@@ -20,6 +20,30 @@ The implementation targets the **µRISCV** architecture.
 * `phase1/asl.c`: Source code for Semaphore management.
 * `p1test.c`: The test suite provided to verify the implementation.
 * `headers/`: Header files (`pcb.h`, `asl.h`, `types.h`, `listx.h`, `const.h`).
+
+# PandOSsh - Phase 2
+
+## Project Description
+This project implements **Level 3 (The Nucleus)** of the PandOSsh operating system.
+It builds upon the Level 2 data structures to provide:
+
+* **Exception Handling:** Centralized management of interrupts, syscalls, TLB, and traps.
+* **Process Scheduling:** A preemptive Round-Robin scheduler with time-slicing (5ms).
+* **System Services (SYSCALLs):** 10 core kernel services for process creation, termination, and I/O synchronization.
+* **CPU Time Accounting:** Precision tracking of CPU usage for each process.
+
+The implementation targets the **µRISCV** architecture.
+
+## Files (Phase 2 additions)
+* `initial.c`: System boot, Level 2 data structure initialization, and first process execution.
+* `scheduler.c`: The preemptive Round-Robin scheduler and CPU idle state (WAIT) management.
+* `syscalls.c`: Implementation of the 10 Nucleus service calls (NSYS1-NSYS10).
+* `interrupts.c`: Management of device interrupts and internal timers (PLT/Interval Timer).
+* `exceptions.c`: Main entry point for all hardware exceptions and trap routing.
+* `traps.c`: Logic for handling program traps and the "Pass Up or Die" mechanism.
+* `tlb.c`: Handler for TLB management exceptions
+* `utils.c`: Support utilities 
+* `headers/`: Header files.
 
 ## Build Instructions
 Prerequisites: `cmake` and the `riscv64-unknown-elf` toolchain must be installed.
